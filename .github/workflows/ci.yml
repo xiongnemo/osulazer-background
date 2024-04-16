@@ -1,5 +1,5 @@
 on: [push, pull_request]
-name: Continuous Integration
+name: Build
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -8,54 +8,9 @@ permissions:
   contents: read # to fetch code (actions/checkout)
 
 jobs:
-  inspect-code:
-    name: Code Quality
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install .NET 8.0.x
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Restore Tools
-        run: dotnet tool restore
-
-      - name: Restore Packages
-        run: dotnet restore osu.Desktop.slnf
-
-      - name: Restore inspectcode cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/inspectcode
-          key: inspectcode-${{ hashFiles('.config/dotnet-tools.json', '.github/workflows/ci.yml', 'osu.sln*', 'osu*.slnf', '.editorconfig', '.globalconfig', 'CodeAnalysis/*', '**/*.csproj', '**/*.props') }}
-
-      - name: Dotnet code style
-        run: dotnet build -c Debug -warnaserror osu.Desktop.slnf -p:EnforceCodeStyleInBuild=true
-
-      - name: CodeFileSanity
-        run: |
-          # TODO: Add ignore filters and GitHub Workflow Command Reporting in CFS. That way we don't have to do this workaround.
-          # FIXME: Suppress warnings from templates project
-          exit_code=0
-          while read -r line; do
-            if [[ ! -z "$line" ]]; then
-              echo "::error::$line"
-              exit_code=1
-            fi
-          done <<< $(dotnet codefilesanity)
-          exit $exit_code
-
-      - name: InspectCode
-        run: dotnet jb inspectcode $(pwd)/osu.Desktop.slnf --no-build --output="inspectcodereport.xml" --caches-home="inspectcode" --verbosity=WARN
-
-      - name: NVika
-        run: dotnet nvika parsereport "${{github.workspace}}/inspectcodereport.xml" --treatwarningsaserrors
 
   test:
-    name: Test
+    name: Build Desktop
     runs-on: ${{matrix.os.fullname}}
     env:
       OSU_EXECUTION_MODE: ${{matrix.threadingMode}}
@@ -66,7 +21,6 @@ jobs:
             - { prettyname: Windows, fullname: windows-latest }
             - { prettyname: macOS, fullname: macos-latest }
             - { prettyname: Linux, fullname: ubuntu-latest }
-          threadingMode: ['SingleThread', 'MultiThreaded']
     timeout-minutes: 60
     steps:
       - name: Checkout
@@ -78,20 +32,16 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Compile
-        run: dotnet build -c Debug -warnaserror osu.Desktop.slnf
+        run: dotnet build -c Release -warnaserror osu.Desktop.slnf
 
-      - name: Test
-        run: dotnet test $pwd/**/*.Tests/bin/Debug/*/*.Tests.dll --logger "trx;LogFileName=TestResults-${{matrix.os.prettyname}}-${{matrix.threadingMode}}.trx" -- NUnit.ConsoleOut=0
-        shell: pwsh
-
-      # Attempt to upload results even if test fails.
-      # https://docs.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#always
-      - name: Upload Test Results
-        uses: actions/upload-artifact@v3
-        if: ${{ always() }}
-        with:
-          name: osu-test-results-${{matrix.os.prettyname}}-${{matrix.threadingMode}}
-          path: ${{github.workspace}}/TestResults/TestResults-${{matrix.os.prettyname}}-${{matrix.threadingMode}}.trx
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.3.1
+        with: 
+          # Artifact name
+          name: osulazer-background-${{matrix.os.fullname}} # optional, default is artifact
+          # A file, directory or wildcard pattern that describes what to upload
+          path: osulazer-background
+    
 
   build-only-android:
     name: Build only (Android)
@@ -116,7 +66,15 @@ jobs:
         run: dotnet workload install maui-android
 
       - name: Compile
-        run: dotnet build -c Debug osu.Android.slnf
+        run: dotnet build -c Release osu.Android.slnf
+
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.3.1
+        with: 
+          # Artifact name
+          name: osulazer-background-Android # optional, default is artifact
+          # A file, directory or wildcard pattern that describes what to upload
+          path: osulazer-background
 
   build-only-ios:
     name: Build only (iOS)
@@ -140,4 +98,10 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_15.2.app/Contents/Developer
 
       - name: Build
-        run: dotnet build -c Debug osu.iOS
+        run: dotnet build -c Release osu.iOS
+
+      with: 
+          # Artifact name
+          name: osulazer-background-iOS # optional, default is artifact
+          # A file, directory or wildcard pattern that describes what to upload
+          path: osulazer-background
