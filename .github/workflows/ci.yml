@@ -38,9 +38,9 @@ jobs:
         uses: actions/upload-artifact@v4.3.1
         with: 
           # Artifact name
-          name: osulazer-background-${{matrix.os.fullname}} # optional, default is artifact
+          name: osu.Desktop-${{matrix.os.fullname}} # optional, default is artifact
           # A file, directory or wildcard pattern that describes what to upload
-          path: .
+          path: ./osu.Desktop
     
 
   build-only-android:
@@ -72,9 +72,9 @@ jobs:
         uses: actions/upload-artifact@v4.3.1
         with: 
           # Artifact name
-          name: osulazer-background-Android # optional, default is artifact
+          name: osu-Android # optional, default is artifact
           # A file, directory or wildcard pattern that describes what to upload
-          path: .
+          path: ./osu.Android
 
   build-only-ios:
     name: Build only (iOS)
@@ -104,6 +104,6 @@ jobs:
         uses: actions/upload-artifact@v4.3.1  
         with: 
           # Artifact name
-          name: osulazer-background-iOS # optional, default is artifact
+          name: osu.iOS # optional, default is artifact
           # A file, directory or wildcard pattern that describes what to upload
-          path: .
+          path: ./osu.iOS
