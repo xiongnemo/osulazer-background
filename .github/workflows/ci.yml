@@ -99,8 +99,10 @@ jobs:
 
       - name: Build
         run: dotnet build -c Release osu.iOS
-
-      with: 
+  
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.3.1  
+        with: 
           # Artifact name
           name: osulazer-background-iOS # optional, default is artifact
           # A file, directory or wildcard pattern that describes what to upload
